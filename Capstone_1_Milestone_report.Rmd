@@ -126,6 +126,8 @@ Exploratory analysis of the data express some features:
 ```{r pressure, echo=FALSE}
 # first some sampling
 
+
+
 # Some plots
 #
 
@@ -133,10 +135,21 @@ Exploratory analysis of the data express some features:
 ```
 
 
-
-
 # 5 Plans for creating the prediction algorithm and Shiny app
 
+There will be following phases in this Capstore project. 
+
+- getting and cleaning data
+- exploratory data analysis
+- sampling
+- creating training and test sets
+- creating corporas
+- text mining tools and ngrams
+- choosing prediction models
+- making predictions
+- creating app based on predictions
+- create materials and apps for publishing
+- publish the app, guidelines and other materials
 
 # 6 Licence and source code
 
