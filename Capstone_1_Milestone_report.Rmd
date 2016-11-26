@@ -7,7 +7,7 @@ output: html_document
 
 # 1 Summary
 
-In this report 
+In this report ... (last job, write the summary)
 
 # 2 This milestone report
 
@@ -119,19 +119,25 @@ kable(fileinfotable, format = "markdown", align='r', padding=0)
 
 ```
 
-## 4 Including Plots
+# 4 Features of data
 
-You can also embed plots, for example:
+Exploratory analysis of the data express some features:
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+# first some sampling
+
+# Some plots
+#
+
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
-# 5 Conclusions
+
+
+# 5 Plans for creating the prediction algorithm and Shiny app
 
 
 # 6 Licence and source code
 
-This repors has licenced with MIT licence and sourcecode is available in the GitHub: 
+This repors has licenced with MIT licence and sourcecode is available in the GitHub: https://github.com/vtenhunen/DataScienceCapstone/blob/master/Capstone_1_Milestone_report.Rmd
