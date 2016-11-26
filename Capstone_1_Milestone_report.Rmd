@@ -1,0 +1,137 @@
+---
+title: "Capstone Milestone Report"
+author: "vtenhunen"
+date: "23 November 2016"
+output: html_document
+---
+
+# 1 Summary
+
+In this report 
+
+# 2 This milestone report
+
+The goal of this report is to describe general properties of the data we are using in the capstone project. The report contain exploratory analysis and goals for the eventual app and algorithm. This document concise and explain only the major features of the data and briefly summarize plans for creating the prediction algorithm and Shiny app.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(message = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+```
+
+# 3 General information about data
+
+```{r getdata, eval=FALSE}
+# Make sure that we have right locale in our system
+Sys.setlocale("LC_TIME","en_US.UTF-8")
+
+# Getting the dataset
+DataURL <- "https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip"
+DataFile="Coursera-SwiftKey.zip"
+
+if(!file.exists(DataFile)){
+      # Get the data for the assignment
+      download.file(DataURL, DataFile)
+      unzip(DataFile)
+}
+```
+
+```{r libraries}
+# Libraries
+#library(SnowballC) # for stemming
+#library(tm) # text mining
+#library(ggplot2) # plotting things
+#library(dplyr) # this is so useful
+library(knitr) # kable is here
+#library(quanteda) # for tokenizing and nlp
+#library(LaF) # for selecting random lines
+library(stringr) # for counting words
+```
+
+## 3.1 Origin of the data
+
+In this report we use Capstone training dataset produced by SwiftKey. Origin of the data is
+https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
+
+In this report the English database is used but three other databases in German, Russian and Finnish are also available.
+
+## 3.2 File names and sizes, number of lines and words 
+
+Size of the files has calculated as real size of original files on the disk. Number of lines and words are also calculated before cleaning or tokenization of the data.
+
+```{r filesizes}
+## Files
+# en_US blogs
+blogsdata ="./final/en_US/en_US.blogs.txt"
+
+# twitter en_US
+twitterdata="./final/en_US/en_US.twitter.txt"
+
+# news en_US
+newsdata="./final/en_US/en_US.news.txt"
+
+# Summaries of the data
+## File sizes
+fsb <- utils:::format.object_size(file.size(blogsdata), "auto")
+fst <- utils:::format.object_size(file.size(twitterdata), "auto")
+fsn <- utils:::format.object_size(file.size(newsdata), "auto")
+```
+
+```{r linesandwords}
+# number of lines and words, blogs
+con <- file(blogsdata)
+btext <- readLines(con) # all lines
+close(con) #remember to close
+lnb <- length(btext) # count lines 
+wob <- sum(str_count(btext, "\\S+")) # count words
+rm(btext) # release memory
+
+# twitter
+con <- file(twitterdata)
+ttext <- readLines(con) # all lines
+close(con) #remember to close
+lnt <- length(ttext) # count lines
+wot <- sum(str_count(ttext, "\\S+")) # count words
+rm(ttext) # release memory
+
+# news
+con <- file(newsdata)
+ntext <- readLines(con) # all lines
+close(con) #remember to close
+lnn <- length(ntext) # count the lines
+won <- sum(str_count(ntext, "\\S+")) # count words
+rm(ntext) # release memory
+
+# let's collect data to the data frame (which will be presented as a table)
+fileinfotable <- data.frame(File = c("en_US.blogs.txt", "en_US.news.txt", "en_US.twitter.txt"),
+                            Size = c(fsb, fsn, fst),
+                            Lines = c(lnb, lnn, lnt),
+                            Words = c(wob, won, wot))
+```
+
+Information of the files, lines and words is presented in the following table: 
+
+```{r kabletable}
+#Now, print the table
+kable(fileinfotable, format = "markdown", align='r', padding=0)
+
+```
+
+## 4 Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+# 5 Conclusions
+
+
+# 6 Licence and source code
+
+This repors has licenced with MIT licence and sourcecode is available in the GitHub: 
