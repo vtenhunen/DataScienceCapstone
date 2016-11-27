@@ -7,7 +7,7 @@ output: html_document
 
 # 1 Summary
 
-In this report ... (last job, write the summary)
+In this report has described analysis of the three texts written in English; blogs, news and twitter. Exploratory analysis of the data presented in this report. One interesting result is that all three corpora based on these three texts are different which could be the result of sampling or the nature of the texts. People use language different way in the different contexts. Technically there will be need to optimization in memory usage issues.
 
 # 2 This milestone report
 
@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(cache=TRUE)
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
+#knitr::opts_chunk$set(error = TRUE)
 #knitr::opts_chunk$set(eval = FALSE)
 ```
 
@@ -42,25 +43,23 @@ if(!file.exists(DataFile)){
 # Libraries
 library(SnowballC) # for stemming
 library(tm) # text mining
-#library(ggplot2) # plotting things
-#library(dplyr) # this is so useful
+library(ggplot2) # plotting things
 library(data.table)
 library(pander)
 library(knitr) # kable is here
-#library(quanteda) # for tokenizing and nlp
 library(LaF) # for selecting random lines
 library(stringr) # for counting words
 library(profr) # memory profiler
 ```
 
-## Data, files, lines and words
+## 3.1 Data, files, lines and words
 
 In this report we use Capstone training dataset produced by SwiftKey. Origin of the data is
 https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
 
 In this report the English database has used in this report but three other databases in German, Russian and Finnish are also available. Also, in this report has not used other information sources than these SwiftKey files, but eventual report and demo it is also possible.
 
-Data is in three files which are en_US.blogs.txt, en_US.news.txt and en_US.twitter.txt.
+Data is in three files which are *en_US.blogs.txt*, *en_US.news.txt* and *en_US.twitter.txt*.
 
 Size of the files has calculated as real size of original files on the disk. Number of lines and words are also calculated before cleaning or tokenization of the data.
 
@@ -125,34 +124,256 @@ There is some possibilities to release memory with *gc* command before actual te
 *gc* gives us following information within this report:
 
 ```{r memory, echo=FALSE, eval=TRUE}
-rm(btext) # remove the object we don't need anymore
-rm(ntext) # remove the object we don't need anymore
-rm(ttext) # remove the object we don't need anymore
-gc(verbose = TRUE) # garbage collection release memote
+gc(verbose = TRUE) # garbage collection release memory
 ```
 
 # 4 Features of data
 
-Exploratory analysis of the data express some features:
+## 4.1 Introduction
 
-```{r pressure, echo=FALSE}
-# first some sampling
+Exploratory analysis of the data express some features like word frequencies. Before we can show some plots about this, we have to make some operations with the data like sampling, tokenizing and computing. 
+
+Sampling is needed because there is lot of needs for memory to creating the corpus. Tokenising clean the data from features we can't use and make computational processing possible. In the R, there is some packages which we use here like *LaF* for sampling and *tm* for tokenizing and other text mining operations.
+
+We use here first data from blogs i.e. from the file *en_US.blogs.txt* and then data from the news (*en_US.news.txt*) and Twitter (*en_US.twitter.txt*).
+
+Because of the memory usage, we use in this report only 0.5 % sample. In the final predictions this sample size have to be optimized.
 
 
+```{r sampling, echo=TRUE}
+# Read samples with LaF package
+bsample <- sample_lines(blogsdata, lnb/200) # blog text
+```
 
-# Some plots
-#
+## 4.2 Corpus, cleaning and tokenizing
 
+Then we use *tm* to make a corpus and inspect little bit the data. 
+
+```{r corpus, echo=TRUE}
+# First we create the corpus
+bdat <- Corpus(VectorSource(bsample), readerControl = list(language = "en"))
+# Then we inspect the document number 256 as an example
+writeLines(as.character(bdat[[256]]))
+```
+
+Then we start to clean and tokienizing the data. Here we also use *tm* package and following commands.
+
+```{r tokenizing, echo=TRUE}
+# Changing marks to spaces
+# The function to do this cleaning with *tm* and *regex* 
+cspace <- content_transformer(function(x, pattern) 
+      {return (gsub(pattern, " ", x))})
+
+# Then we we clean the text with it, so replace some marks with the space
+bdat <- tm_map(bdat, cspace, "-")
+bdat <- tm_map(bdat, cspace, ":")
+bdat <- tm_map(bdat, cspace, "’")
+bdat <- tm_map(bdat, cspace, "‘")
+bdat <- tm_map(bdat, cspace, " -")
+
+# Replace punctuation marks with space 
+bdat <- tm_map(bdat, removePunctuation)
+
+# Transform text to lower case
+bdat <- tm_map(bdat, content_transformer(tolower))
+
+# Remove numbers
+bdat <- tm_map(bdat, removeNumbers) 
+
+# Remove stopwords using tm package tools
+bdat <- tm_map(bdat, removeWords, stopwords("english"))
+
+# Remove whitespaces
+bdat <- tm_map(bdat, stripWhitespace)
+
+# Stemming, using SnowballC
+bdat <- tm_map(bdat, stemDocument)
 
 ```
 
+As an example, same document than above looks like this:
 
-# 5 Plans for creating the prediction algorithm and Shiny app
+```{r writeexample, echo=FALSE, eval=TRUE}
+#  write a row
+writeLines(as.character(bdat[[256]]))
+```
 
-There will be following tasks in this Capstore project in the future: 
+
+## 4.3 Document term matrix (DTM)
+
+Because short (less than 3 letters) or very long (more than 40) words are not reasonable in this case, we enforce lower and upper limit to length of the words when we create document term matrix.
+
+```{r dtm, echo=TRUE, eval=TRUE}
+bdtm <-DocumentTermMatrix(bdat, control=list(wordLengths=c(3, 40)))
+bdtm
+```
+
+## 4.4 Frequencies
+
+```{r gc2, echo=FALSE, eval=FALSE}
+# garbage collection to release memory before freq computing
+gc(verbose = FALSE) 
+```
+
+Here we calculate frequency of occurrence of each word in the corpus based on the document term matrix above. This phase of the work is very memory intensive because here we create very big vector.
+
+```{r freq, echo=FALSE, eval=TRUE}
+bfreq <- sort(colSums(as.matrix(bdtm)), decreasing=TRUE)   
+```
+
+Now we have `r length(bfreq)` words in the *freq* vector and we can inspect it. 
+
+What are 20 the most occuring terms?
+```{r mostfreq, echo=FALSE, eval=TRUE}
+head(bfreq, 20)
+```
+
+Ten least occuring terms are:
+```{r leastfreq, echo=FALSE, eval=TRUE}
+tail(bfreq, 10)
+```
+
+## 4.5 Plotting
+
+Here we plot the most occuring terms (frequecy is more than 320).
+
+```{r plotblog, echo=FALSE, eval=TRUE}
+
+# data frame of the words and frequecies
+dfbwords <- data.frame(Word=names(bfreq), Frequency=bfreq)   
+
+# histogram with ggplot
+p <- ggplot(subset(dfbwords, bfreq > 320), aes(Word, Frequency))    
+p <- p + geom_bar(stat="identity")   
+p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))   
+p 
+```
+
+# 5 Other datasets
+
+When we do similar cleaning and analysis to the news and twitter texts, we get following results.
+
+## 5.1 News text
+```{r gc3, echo=FALSE, eval=FALSE}
+# garbage collection to release memory before freq computing
+gc(verbose = TRUE) 
+```
+
+Here is 20 the most occuring terms of the news data set:
+
+```{r newsanalysis, echo=FALSE, eval=TRUE}
+# Read samples with LaF package
+nsample <- sample_lines(newsdata, lnn/200) # blog text
+# Create the corpus
+ndat <- Corpus(VectorSource(nsample), readerControl = list(language = "en"))
+# Then we we clean the text with it, so replace some marks with the space
+ndat <- tm_map(ndat, cspace, "-")
+ndat <- tm_map(ndat, cspace, ":")
+ndat <- tm_map(ndat, cspace, "’")
+ndat <- tm_map(ndat, cspace, "‘")
+ndat <- tm_map(ndat, cspace, " -")
+# Replace punctuation marks with space 
+ndat <- tm_map(ndat, removePunctuation)
+# Transform text to lower case
+ndat <- tm_map(ndat, content_transformer(tolower))
+# Remove numbers
+ndat <- tm_map(ndat, removeNumbers) 
+# Remove stopwords using tm package tools
+ndat <- tm_map(ndat, removeWords, stopwords("english"))
+# Remove whitespaces
+ndat <- tm_map(ndat, stripWhitespace)
+# Stemming, using SnowballC
+ndat <- tm_map(ndat, stemDocument)
+# DTM
+ndtm <-DocumentTermMatrix(ndat, control=list(wordLengths=c(3, 40)))
+# sorting
+nfreq <- sort(colSums(as.matrix(ndtm)), decreasing=TRUE)   
+head(nfreq, 20)
+```
+
+The plot of the most occuring terms (frequecy is more than 320).
+
+```{r newsplots, echo=FALSE, eval=TRUE}
+# data frame of the words and frequecies
+dfnwords <- data.frame(Word=names(nfreq), Frequency=nfreq)   
+
+# histogram with ggplot
+p <- ggplot(subset(dfnwords, nfreq > 320), aes(Word, Frequency))    
+p <- p + geom_bar(stat="identity")   
+p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))   
+p 
+```
+
+
+## 5.2 Twitter texts
+```{r gc4, echo=FALSE, eval=FALSE}
+# garbage collection to release memory before freq computing
+gc(verbose = TRUE) 
+```
+
+Here is 20 the most occuring terms of the news data set:
+
+```{r twitteranalysis, echo=FALSE, eval=TRUE}
+# Read samples with LaF package
+tsample <- sample_lines(twitterdata, lnt/200) # blog text
+# Create the corpus
+tdat <- Corpus(VectorSource(tsample), readerControl = list(language = "en"))
+# Then we we clean the text with it, so replace some marks with the space
+tdat <- tm_map(tdat, cspace, "-")
+tdat <- tm_map(tdat, cspace, ":")
+tdat <- tm_map(tdat, cspace, "’")
+tdat <- tm_map(tdat, cspace, "‘")
+tdat <- tm_map(tdat, cspace, " -")
+# Replace punctuation marks with space 
+tdat <- tm_map(tdat, removePunctuation)
+# Transform text to lower case
+tdat <- tm_map(tdat, content_transformer(tolower))
+# Remove numbers
+tdat <- tm_map(tdat, removeNumbers) 
+# Remove stopwords using tm package tools
+tdat <- tm_map(tdat, removeWords, stopwords("english"))
+# Remove whitespaces
+tdat <- tm_map(tdat, stripWhitespace)
+# Stemming, using SnowballC
+tdat <- tm_map(tdat, stemDocument)
+# DTM
+tdtm <-DocumentTermMatrix(tdat, control=list(wordLengths=c(3, 40)))
+# sorting
+tfreq <- sort(colSums(as.matrix(tdtm)), decreasing=TRUE)   
+head(tfreq, 20)
+```
+
+The plot of the most occuring terms (frequecy is more than 320).
+
+```{r twitterplots, echo=FALSE, eval=TRUE}
+# data frame of the words and frequecies
+dftwords <- data.frame(Word=names(tfreq), Frequency=tfreq)   
+
+# histogram with ggplot
+p <- ggplot(subset(dftwords, tfreq > 320), aes(Word, Frequency))    
+p <- p + geom_bar(stat="identity")   
+p <- p + theme(axis.text.x=element_text(angle=45, hjust=1))   
+p 
+```
+
+## 5.3 Findings and conclusions
+
+All three corpora based on these three texts are remarkably different which could be the result of at least couple of reasons: 
+
+- Sampling; we have used here only 0.5 % of the texts. Bigger samples could give little bit better and more similar results
+- The nature of the texts. People use language different way in the different contexts.
+
+One opportunity is to add some way context depencies to the analysis and predictions.
+
+Memory usage and running time of the application will be the challenge because corpora is quite heavy to analyze. This have to take into account in the future.
+
+# 6 Plans for creating the prediction algorithm and Shiny app
+
+There will be following tasks in this Capstone project in the future: 
 
 - getting and cleaning data
 - exploratory data analysis
+- optimizing the memory usage and running time of the application
 - sampling
 - creating training and test sets
 - creating corporas
@@ -164,6 +385,8 @@ There will be following tasks in this Capstore project in the future:
 - publish the app, guidelines and other materials
 
 Eventual goal for the prediction model is to minimize both the size and runtime of the model in order to provide a reasonable experience to the user. Within this milestone report has taken into account some actions but this needs further analysis.
+
+On of the most important issue is the selection and sampling the data. Even if there is not ngrams presented it is quite obvious, based on analysis in previous chapters, that quality of predictions depends on the the corpus which has used. 
 
 # 6 Licence and source code
 
