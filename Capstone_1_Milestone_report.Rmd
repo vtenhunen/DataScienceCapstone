@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_chunk$set(cache=TRUE)
 knitr::opts_chunk$set(message = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
-knitr::opts_chunk$set(eval = FALSE)
+#knitr::opts_chunk$set(eval = FALSE)
 ```
 
 # 3 General information about data
@@ -40,30 +40,31 @@ if(!file.exists(DataFile)){
 
 ```{r libraries}
 # Libraries
-#library(SnowballC) # for stemming
-#library(tm) # text mining
+library(SnowballC) # for stemming
+library(tm) # text mining
 #library(ggplot2) # plotting things
 #library(dplyr) # this is so useful
+library(data.table)
+library(pander)
 library(knitr) # kable is here
 #library(quanteda) # for tokenizing and nlp
-#library(LaF) # for selecting random lines
+library(LaF) # for selecting random lines
 library(stringr) # for counting words
+library(profr) # memory profiler
 ```
 
-## 3.1 Origin of the data
+## Data, files, lines and words
 
 In this report we use Capstone training dataset produced by SwiftKey. Origin of the data is
 https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
 
-In this report the English database has used in this report but three other databases in German, Russian and Finnish are also available.
+In this report the English database has used in this report but three other databases in German, Russian and Finnish are also available. Also, in this report has not used other information sources than these SwiftKey files, but eventual report and demo it is also possible.
 
-In this report has not used other information sources than these SwiftKey files, but eventual report and demo it is also possible.
-
-## 3.2 File names and sizes, number of lines and words 
-
-Data is in three files which are
+Data is in three files which are en_US.blogs.txt, en_US.news.txt and en_US.twitter.txt.
 
 Size of the files has calculated as real size of original files on the disk. Number of lines and words are also calculated before cleaning or tokenization of the data.
+
+Information of the files, lines and words is in the following table: 
 
 ```{r filesizes}
 ## Files
@@ -83,14 +84,13 @@ fst <- utils:::format.object_size(file.size(twitterdata), "auto")
 fsn <- utils:::format.object_size(file.size(newsdata), "auto")
 ```
 
-```{r linesandwords, eval=FALSE}
+```{r linesandwords, results="asis"}
 # number of lines and words, blogs
 con <- file(blogsdata)
 btext <- readLines(con) # all lines
 close(con) #remember to close
 lnb <- length(btext) # count lines 
 wob <- sum(str_count(btext, "\\S+")) # count words
-rm(btext) # release memory
 
 # twitter
 con <- file(twitterdata)
@@ -98,7 +98,6 @@ ttext <- readLines(con) # all lines
 close(con) #remember to close
 lnt <- length(ttext) # count lines
 wot <- sum(str_count(ttext, "\\S+")) # count words
-rm(ttext) # release memory
 
 # news
 con <- file(newsdata)
@@ -106,24 +105,30 @@ ntext <- readLines(con) # all lines
 close(con) #remember to close
 lnn <- length(ntext) # count the lines
 won <- sum(str_count(ntext, "\\S+")) # count words
-rm(ntext) # release memory
-
-# Try to release some memory
-gc(verbose = FALSE)
 
 # let's collect data to the data frame (which will be presented as a table)
 fileinfotable <- data.frame(File = c("en_US.blogs.txt", "en_US.news.txt", "en_US.twitter.txt"),
                             Size = c(fsb, fsn, fst),
                             Lines = c(lnb, lnn, lnt),
                             Words = c(wob, won, wot))
+
+
+kable(fileinfotable, format = "markdown")
+
+
 ```
 
-Information of the files, lines and words is presented in the following table: 
+## 3.2 Managing memory
 
-```{r kabletable}
-#Now, print the table
-kable(fileinfotable, format = "markdown", align='r', padding=0)
+There is some possibilities to release memory with *gc* command before actual text mining. Additionally some analysis will be made with *profr* package later on.
 
+*gc* gives us following information within this report:
+
+```{r memory, echo=FALSE, eval=TRUE}
+rm(btext) # remove the object we don't need anymore
+rm(ntext) # remove the object we don't need anymore
+rm(ttext) # remove the object we don't need anymore
+gc(verbose = TRUE) # garbage collection release memote
 ```
 
 # 4 Features of data
@@ -152,14 +157,13 @@ There will be following tasks in this Capstore project in the future:
 - creating training and test sets
 - creating corporas
 - text mining tools and ngrams (unigrams, bigrams, trigrams)
-- analysing and choosing prediction models
+- analysing and choosing prediction models (lm, glm, decision trees etc.)
 - making predictions
 - creating app based on predictions
 - create materials and apps for publishing
 - publish the app, guidelines and other materials
 
 Eventual goal for the prediction model is to minimize both the size and runtime of the model in order to provide a reasonable experience to the user. Within this milestone report has taken into account some actions but this needs further analysis.
-
 
 # 6 Licence and source code
 
